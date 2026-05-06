@@ -1,4 +1,5 @@
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { useCartStore } from "../store/cartStore";
 import { MovementRepository } from "../database/repositories/movementRepository";
 import { ProductRepository } from "../database/repositories/productRepository";
@@ -9,6 +10,7 @@ import { SaleRepository } from "../database/repositories/saleRepository";
 import { saleDetailRepository } from "../database/repositories/saleDetailRepository";
 
 export default function ProcessSale() {
+  const router = useRouter(); // Nuevo: Hook para navegación
   const items = useCartStore((state) => state.items);
   const total = useCartStore((state) => state.total);
   const payment = useCartStore((state) => state.payment);
@@ -30,11 +32,13 @@ export default function ProcessSale() {
         const resultSale = await SaleRepository.create(total, payment!);
 
         for (const item of items) {
+          // Nuevo: Pasar el ID de la venta al crear el movimiento
           await MovementRepository.create(
             item.product.id,
             "Venta POS",
             "salida",
-            item.quantity
+            item.quantity,
+            resultSale.lastInsertRowId
           );
           await ProductRepository.adjustStock(item.product.id, -item.quantity);
           await saleDetailRepository.create(
@@ -59,6 +63,13 @@ export default function ProcessSale() {
         disabled={items.length === 0}
         title="Procesar Venta"
         iconName="cart-arrow-down"
+      />
+      {/* Nuevo: Botón para ir al historial de ventas */}
+      <CustomButton
+        onPress={() => router.push("/salesHistory")}
+        title="Historial de Ventas"
+        iconName="rectangle-list"
+        style={{ marginTop: 20, backgroundColor: "#007bff" }}
       />
       <PaymentModal
         visible={showPayment}

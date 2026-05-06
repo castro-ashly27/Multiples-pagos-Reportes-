@@ -23,6 +23,7 @@ export default function CustomButton({
         styles.button,
         isSelected && styles.selected,
         disabled && styles.disabled,
+        pressableProps.style as any,
       ]}
     >
       {iconName && <FontAwesome6 name={iconName} size={24} color="white" />}
