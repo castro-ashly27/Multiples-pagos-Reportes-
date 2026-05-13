@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { ProductRepository } from "../database/repositories/productRepository";
 import { useCartStore } from "../store/cartStore";
+import { useRouter } from "expo-router";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 
 export interface Product {
   id: number;
@@ -19,6 +21,7 @@ export interface Product {
 }
 
 export default function ProductSearch() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const addItem = useCartStore((state) => state.addItem);
@@ -46,6 +49,15 @@ export default function ProductSearch() {
         value={query}
         onChangeText={handleSearch}
       />
+      <View style={styles.historyContainer}>
+        <TouchableOpacity
+          style={styles.historyButton}
+          onPress={() => router.push("/salesHistory")}
+        >
+          <FontAwesome6 name="rectangle-list" size={18} color="#555" />
+          <Text style={styles.historyText}>Historial de Ventas</Text>
+        </TouchableOpacity>
+      </View>
       {results.length > 0 && (
         <FlatList
           data={results}
@@ -67,7 +79,7 @@ export default function ProductSearch() {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   input: {
     borderWidth: 1,
@@ -75,6 +87,27 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     backgroundColor: "#fff",
+  },
+  historyContainer: {
+    alignItems: "flex-end",
+    marginVertical: 8,
+  },
+  historyButton: {
+    flexDirection: "row",
+    paddingHorizontal: 15,
+    height: 40,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#eee",
+    gap: 8,
+  },
+  historyText: {
+    fontSize: 14,
+    color: "#555",
+    fontWeight: "500",
   },
   list: {
     maxHeight: 150,

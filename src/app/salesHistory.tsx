@@ -19,7 +19,7 @@ import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
  * Permite visualizar las ventas pasadas y realizar la anulación de las mismas.
  */
 export default function SalesHistory() {
-  const router = useRouter(); // Nuevo: Para volver atrás
+  const router = useRouter();
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,7 +65,10 @@ export default function SalesHistory() {
               Alert.alert("Éxito", "Venta anulada correctamente");
               loadSales();
             } catch (error: any) {
-              Alert.alert("Error", "No se pudo anular la venta: " + error.message);
+              Alert.alert(
+                "Error",
+                "No se pudo anular la venta: " + error.message
+              );
             }
           },
         },
@@ -81,7 +84,10 @@ export default function SalesHistory() {
         <View style={styles.header}>
           <Text style={styles.saleId}>Venta #{item.id}</Text>
           <TouchableOpacity
-            style={[styles.anularButton, isAnulada && { backgroundColor: "gray" }]}
+            style={[
+              styles.anularButton,
+              isAnulada && { backgroundColor: "gray" },
+            ]}
             onPress={() => !isAnulada && handleAnular(item.id)}
             disabled={isAnulada}
           >
@@ -95,22 +101,63 @@ export default function SalesHistory() {
         <View style={styles.productsList}>
           {item.details?.map((detail: any, index: number) => (
             <View key={index} style={{ marginBottom: 6 }}>
-              <Text style={{ fontWeight: "bold", fontSize: 15 }}>Producto: {detail.nombre}</Text>
+              <Text style={{ fontWeight: "bold", fontSize: 15 }}>
+                Producto: {detail.nombre}
+              </Text>
               <Text>Fecha Venta: {new Date(item.fecha).toLocaleString()}</Text>
               <Text>Cantidad: {detail.cantidad}</Text>
               <Text>Precio: C${detail.precio}</Text>
-
             </View>
           ))}
         </View>
 
-
         {/* 6. Total */}
-        <Text style={{ fontWeight: "bold", color: "#0ab546", fontSize: 17, marginTop: 4 }}>
+        <Text
+          style={{
+            fontWeight: "bold",
+            color: "#0ab546",
+            fontSize: 17,
+            marginTop: 4,
+          }}
+        >
           Total: C${item.total?.toFixed(2)}
         </Text>
 
-
+        {/* 7. Método de pago */}
+        {item.metodo_pago && (
+          <View style={styles.paymentInfo}>
+            <View style={styles.paymentMethodRow}>
+              <FontAwesome6
+                name={
+                  item.metodo_pago === "efectivo"
+                    ? "money-bill"
+                    : item.metodo_pago === "tarjeta"
+                      ? "credit-card"
+                      : "money-bill-transfer"
+                }
+                size={14}
+                color="#555"
+              />
+              <Text style={styles.paymentMethodText}>
+                {item.metodo_pago === "efectivo"
+                  ? "Efectivo"
+                  : item.metodo_pago === "tarjeta"
+                    ? "Tarjeta"
+                    : "Transferencia"}
+              </Text>
+            </View>
+            {item.metodo_pago === "efectivo" && (
+              <View style={styles.cashDetails}>
+                <Text style={styles.cashDetailText}>
+                  Monto pagado: C${item.monto_pagado?.toFixed(2)}
+                </Text>
+                <Text style={styles.cashDetailText}>
+                  Cambio: C${item.cambio?.toFixed(2)}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
     );
   };
@@ -129,7 +176,11 @@ export default function SalesHistory() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#0ab546" style={{ marginTop: 20 }} />
+        <ActivityIndicator
+          size="large"
+          color="#0ab546"
+          style={{ marginTop: 20 }}
+        />
       ) : (
         <FlatList
           data={sales}
@@ -206,6 +257,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingVertical: 8,
   },
+  paymentInfo: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+  paymentMethodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  paymentMethodText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#555",
+  },
+  cashDetails: {
+    marginTop: 4,
+    marginLeft: 20,
+  },
+  cashDetailText: {
+    fontSize: 13,
+    color: "#666",
+  },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -215,6 +290,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#adb5bd",
     marginTop: 20,
-    fontWeight: '600'
+    fontWeight: "600",
   },
 });
