@@ -10,8 +10,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
-import { SaleRepository } from "../database/repositories/saleRepository";
 import { SaleDetailRepository } from "../database/repositories/saleDetailRepository";
+import { SalePaymentRepository } from "../database/repositories/salePaymentRepository";
+import { SaleRepository } from "../database/repositories/saleRepository";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 
 /**
@@ -29,11 +30,11 @@ export default function SalesHistory() {
       setLoading(true);
       const data = await SaleRepository.getAll();
 
-      // Cargar detalles para cada venta
       const salesWithDetails = await Promise.all(
         data.map(async (sale: any) => {
           const details = await SaleDetailRepository.getByVentaId(sale.id);
-          return { ...sale, details };
+          const pagos = await SalePaymentRepository.getByVentaId(sale.id);
+          return { ...sale, details, pagos };
         })
       );
 
@@ -124,8 +125,27 @@ export default function SalesHistory() {
         </Text>
 
         {/* 7. Método de pago */}
-        {item.metodo_pago && (
-          <View style={styles.paymentInfo}>
+        <View style={styles.paymentInfo}>
+          {item.pagos && item.pagos.length > 0 ? (
+            item.pagos.map((p: any, idx: number) => (
+              <View key={idx} style={styles.paymentMethodRow}>
+                <FontAwesome6
+                  name={
+                    p.metodo === "efectivo"
+                      ? "money-bill"
+                      : p.metodo === "tarjeta"
+                        ? "credit-card"
+                        : "money-bill-transfer"
+                  }
+                  size={14}
+                  color="#555"
+                />
+                <Text style={styles.paymentMethodText}>
+                  {p.metodo.toUpperCase()}: C${p.monto.toFixed(2)}
+                </Text>
+              </View>
+            ))
+          ) : item.metodo_pago ? (
             <View style={styles.paymentMethodRow}>
               <FontAwesome6
                 name={
@@ -139,25 +159,19 @@ export default function SalesHistory() {
                 color="#555"
               />
               <Text style={styles.paymentMethodText}>
-                {item.metodo_pago === "efectivo"
-                  ? "Efectivo"
-                  : item.metodo_pago === "tarjeta"
-                    ? "Tarjeta"
-                    : "Transferencia"}
+                {item.metodo_pago.toUpperCase()}: C${item.monto_pagado?.toFixed(2)}
               </Text>
             </View>
-            {item.metodo_pago === "efectivo" && (
-              <View style={styles.cashDetails}>
-                <Text style={styles.cashDetailText}>
-                  Monto pagado: C${item.monto_pagado?.toFixed(2)}
-                </Text>
-                <Text style={styles.cashDetailText}>
-                  Cambio: C${item.cambio?.toFixed(2)}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
+          ) : null}
+
+          {item.cambio > 0 && (
+            <View style={styles.cashDetails}>
+              <Text style={styles.cashDetailText}>
+                Cambio devuelto: C${item.cambio?.toFixed(2)}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
     );
   };

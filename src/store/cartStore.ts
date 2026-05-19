@@ -1,10 +1,6 @@
 import { create } from "zustand";
 
-export interface PaymentMethod {
-  tipo: "efectivo" | "tarjeta" | "transferencia";
-  monto: number;
-  cambio?: number;
-}
+
 
 interface Product {
   id: number;
@@ -22,8 +18,6 @@ interface CartItem {
 interface CartState {
   items: CartItem[];
   total: number;
-  payment: PaymentMethod | null;
-  setPayment: (payment: PaymentMethod) => void;
   addItem: (product: Product) => void;
   removeItem: (product: number) => void;
   updateQuantity: (producId: number, quantity: number) => void;
@@ -34,7 +28,6 @@ interface CartState {
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   total: 0,
-  payment: null,
   addItem: (product, quantity = 1) => {
     const { items, calcularTotal } = get();
 
@@ -49,10 +42,9 @@ export const useCartStore = create<CartState>((set, get) => ({
     calcularTotal();
   },
   clearCart: () => {
-    set({ items: [], total: 0, payment: null });
+    set({ items: [], total: 0 });
   },
 
-  setPayment: (payment) => set({ payment }),
   updateQuantity: (productId, quantity) => {
     const { items, calcularTotal } = get();
 

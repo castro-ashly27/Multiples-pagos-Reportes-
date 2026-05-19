@@ -5,20 +5,31 @@ import {
   Text,
   TextInput,
   View,
+  FlatList,
+  Alert,
+  Platform,
 } from "react-native";
 import { useCartStore } from "../store/cartStore";
 import CustomButton from "./CustomButton";
 import { useState } from "react";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
-import { PrintService } from "../services/printService";
+import { PrintService, PrintSaleData } from "../services/printService";
 import { SaleRepository } from "../database/repositories/saleRepository";
 import { saleDetailRepository } from "../database/repositories/saleDetailRepository";
 import { MovementRepository } from "../database/repositories/movementRepository";
 import { ProductRepository } from "../database/repositories/productRepository";
+import { SalePaymentRepository } from "../database/repositories/salePaymentRepository";
+import { WebView } from "react-native-webview";
+import PreviewModal from "./PreviewModal";
 
 interface PaymentModalProps {
   visible: boolean;
   onClose: () => void;
+}
+
+interface PaymentEntry {
+  tipo: "efectivo" | "tarjeta" | "transferencia";
+  monto: number;
 }
 
 export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
@@ -26,98 +37,134 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
 
-  // Estados de control
+  // Estados de control general
   const [ventaExitosa, setVentaExitosa] = useState(false);
   const [idVentaGenerada, setIdVentaGenerada] = useState<number | null>(null);
-  const [metodoFinal, setMetodoFinal] = useState("");
-  const [pagoFinal, setPagoFinal] = useState(0);
-  const [cambioFinal, setCambioFinal] = useState(0);
 
+  // Estados de vista previa
+  const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Estado de múltiples pagos
+  const [pagos, setPagos] = useState<PaymentEntry[]>([]);
   const [method, setMethod] = useState<
     "efectivo" | "tarjeta" | "transferencia" | null
   >(null);
-  const [amount, setAmount] = useState("");
-  const [change, setChange] = useState(0);
+  const [amountInput, setAmountInput] = useState("");
   const [isPrinting, setIsPrinting] = useState(false);
+
+  const totalPagado = pagos.reduce((sum, p) => sum + p.monto, 0);
+  const pendiente = Math.max(0, total - totalPagado);
+  const cambio = Math.max(0, totalPagado - total);
+
+  // Función para agregar un pago parcial o total
+  const handleAgregarPago = () => {
+    if (!method) {
+      Alert.alert("Error", "Seleccione un método de pago");
+      return;
+    }
+    const monto = parseFloat(amountInput);
+    if (isNaN(monto) || monto <= 0) {
+      Alert.alert("Error", "Ingrese un monto válido");
+      return;
+    }
+
+    // Agregar el pago a la lista
+    setPagos([...pagos, { tipo: method, monto }]);
+
+    // Resetear selección
+    setMethod(null);
+    setAmountInput("");
+  };
+
+  const handleEliminarPago = (index: number) => {
+    setPagos(pagos.filter((_, i) => i !== index));
+  };
 
   const handleConfirm = async () => {
     if (items.length === 0) {
-      alert("No hay productos en el carrito");
+      Alert.alert("Error", "No hay productos en el carrito");
       return;
     }
-    if (!method) {
-      alert("Seleccione un método de pago");
+    if (totalPagado < total) {
+      Alert.alert("Error", "El monto pagado no cubre el total de la venta");
       return;
     }
-    let paid: number;
-    if (amount.trim() === "") {
-      paid = total;
-    } else {
-      paid = parseFloat(amount);
-    }
-
-    if (paid < total) {
-      alert("Monto insuficiente");
-      return;
-    }
-
-    const currentChange = method === "efectivo" ? paid - total : 0;
 
     try {
-      // Proceso de venta interno
-      const resultSale = await SaleRepository.create(total, {
-        tipo: method,
-        monto: paid,
-        cambio: currentChange,
-      });
+      // 1. Crear venta (con el cambio si hubo)
+      const resultSale = await SaleRepository.create(total, cambio);
+      const ventaId = resultSale.lastInsertRowId;
 
+      // 2. Registrar los pagos múltiples
+      for (const pago of pagos) {
+        await SalePaymentRepository.create(ventaId, pago.tipo, pago.monto);
+      }
+
+      // 3. Registrar movimientos e inventario
       for (const item of items) {
         await MovementRepository.create(
           item.product.id,
           "Venta POS",
           "salida",
           item.quantity,
-          resultSale.lastInsertRowId
+          ventaId
         );
         await ProductRepository.adjustStock(item.product.id, -item.quantity);
         await saleDetailRepository.create(
-          resultSale.lastInsertRowId,
+          ventaId,
           item.product.id,
           item.quantity,
           item.product.precio
         );
       }
 
-      // Guardar datos para el ticket y cambiar estado
-      setMetodoFinal(method);
-      setPagoFinal(paid);
-      setCambioFinal(currentChange);
-      setIdVentaGenerada(resultSale.lastInsertRowId);
+      setIdVentaGenerada(ventaId);
       setVentaExitosa(true);
     } catch (error) {
       console.error("Error en la venta:", error);
-      alert("No se pudo procesar la venta");
+      Alert.alert("Error", "No se pudo procesar la venta");
     }
   };
 
-  const handlePrint = async () => {
+  const getSaleDataForPrint = (): PrintSaleData => ({
+    id: idVentaGenerada!,
+    total: total,
+    pagos: pagos,
+    cambio: cambio,
+    fecha: new Date().toLocaleString(),
+  });
+
+  const handlePrintTicket = async () => {
     if (!idVentaGenerada || isPrinting) return;
     setIsPrinting(true);
     try {
-      await PrintService.printTicket(
-        {
-          id: idVentaGenerada,
-          total: total,
-          metodoPago: metodoFinal,
-          montoPagado: pagoFinal,
-          cambio: cambioFinal,
-          fecha: new Date().toLocaleString(),
-        },
-        items
-      );
+      const html = PrintService.getTicketHtml(getSaleDataForPrint(), items);
+      setPreviewHtml(html);
+      const uri = await PrintService.printTicket(getSaleDataForPrint(), items);
+      setPdfUri(uri);
+      setShowPreview(true);
     } catch (error) {
-      console.error("Error al imprimir:", error);
-      alert("Error al imprimir el ticket");
+      console.error("Error al generar ticket:", error);
+      Alert.alert("Error", "Error al generar la vista previa del ticket");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  const handlePrintPDF = async () => {
+    if (!idVentaGenerada || isPrinting) return;
+    setIsPrinting(true);
+    try {
+      const html = PrintService.getFullPageHtml(getSaleDataForPrint(), items);
+      setPreviewHtml(html);
+      const uri = await PrintService.printFullPage(getSaleDataForPrint(), items);
+      setPdfUri(uri);
+      setShowPreview(true);
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      Alert.alert("Error", "Error al generar la vista previa del PDF");
     } finally {
       setIsPrinting(false);
     }
@@ -127,21 +174,26 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
     clearCart();
     setVentaExitosa(false);
     setIdVentaGenerada(null);
+    setPagos([]);
     setMethod(null);
-    setAmount("");
-    setChange(0);
+    setAmountInput("");
+    setPdfUri(null);
+    setPreviewHtml(null);
+    setShowPreview(false);
     onClose();
   };
 
   return (
     <Modal visible={visible} animationType="slide">
       <View style={styles.mainContainer}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => (ventaExitosa ? handleFinalizar() : onClose())}
-        >
-          <FontAwesome6 name="arrow-left" size={24} color="black" />
-        </Pressable>
+        {!showPreview && (
+          <Pressable
+            style={styles.backButton}
+            onPress={() => (ventaExitosa ? handleFinalizar() : onClose())}
+          >
+            <FontAwesome6 name="arrow-left" size={24} color="black" />
+          </Pressable>
+        )}
 
         <View style={styles.content}>
           {ventaExitosa ? (
@@ -150,14 +202,23 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
                 <FontAwesome6 name="check" size={50} color="#28a745" />
               </View>
               <Text style={styles.successTitle}>¡Venta Procesada!</Text>
-              <Text style={styles.ticketText}>Ticket #{idVentaGenerada}</Text>
+              <Text style={styles.ticketText}>Venta #{idVentaGenerada}</Text>
 
               <View style={styles.buttonContainer}>
                 <CustomButton
-                  title="Imprimir Ticket"
-                  onPress={handlePrint}
-                  iconName="print"
+                  title="Ticket"
+                  onPress={handlePrintTicket}
+                  iconName="receipt"
                   style={styles.printButton}
+                  direction="row"
+                  iconSize={18}
+                  disabled={isPrinting}
+                />
+                <CustomButton
+                  title="Página PDF (Carta)"
+                  onPress={handlePrintPDF}
+                  iconName="file-pdf"
+                  style={styles.pdfButton}
                   direction="row"
                   iconSize={18}
                   disabled={isPrinting}
@@ -174,59 +235,119 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
             </View>
           ) : (
             <View style={styles.paymentSelection}>
-              <Text style={styles.amountText}>C${total.toFixed(2)}</Text>
-              <Text style={styles.methodLabel}>Métodos de pago</Text>
-              <View style={styles.methodsRow}>
-                <CustomButton
-                  title="Efectivo"
-                  onPress={() => setMethod("efectivo")}
-                  iconName="money-bill"
-                  isSelected={method === "efectivo"}
-                />
-                <CustomButton
-                  title="Tarjeta"
-                  onPress={() => setMethod("tarjeta")}
-                  iconName="credit-card"
-                  isSelected={method === "tarjeta"}
-                />
-                <CustomButton
-                  title="Transferencia"
-                  onPress={() => {
-                    setMethod("transferencia");
-                    setAmount(total.toString());
-                  }}
-                  iconName="money-bill-transfer"
-                  isSelected={method === "transferencia"}
-                />
-              </View>
-
-              {method === "efectivo" && (
-                <TextInput
-                  placeholder="Monto pagado"
-                  value={amount}
-                  onChangeText={(text) => {
-                    setAmount(text);
-                    setChange(Number(text) - total);
-                  }}
-                  keyboardType="numeric"
-                  style={styles.input}
-                />
+              <Text style={styles.amountText}>Total: C${total.toFixed(2)}</Text>
+              {pendiente > 0 && (
+                <Text style={styles.pendienteText}>
+                  Falta: C${pendiente.toFixed(2)}
+                </Text>
               )}
-
-              {method === "efectivo" && (
-                <Text style={[styles.changeText, change < 0 && { color: "red" }]}>
-                  {change < 0 ? `Pendiente: C$${Math.abs(change)}` : `Cambio: C$${change}`}
+              {cambio > 0 && (
+                <Text style={styles.cambioText}>
+                  Cambio: C${cambio.toFixed(2)}
                 </Text>
               )}
 
-              <View style={{ marginTop: 15 }}>
+              <Text style={styles.methodLabel}>Métodos de pago</Text>
+
+              {/* Pagos Realizados */}
+              {pagos.length > 0 && (
+                <View style={styles.pagosList}>
+                  {pagos.map((p, index) => (
+                    <View key={index} style={styles.pagoItem}>
+                      <Text style={styles.pagoItemText}>
+                        {p.tipo.toUpperCase()} - C${p.monto.toFixed(2)}
+                      </Text>
+                      <Pressable onPress={() => handleEliminarPago(index)}>
+                        <FontAwesome6 name="trash-can" size={18} color="red" />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Controles para agregar nuevo pago si falta monto */}
+              {pendiente > 0 && (
+                <>
+                  <View style={styles.methodsRow}>
+                    <CustomButton
+                      title="Efectivo"
+                      onPress={() => {
+                        setMethod("efectivo");
+                        setAmountInput(pendiente.toString());
+                      }}
+                      iconName="money-bill"
+                      isSelected={method === "efectivo"}
+                      style={styles.methodBtn}
+                    />
+                    <CustomButton
+                      title="Tarjeta"
+                      onPress={() => {
+                        setMethod("tarjeta");
+                        setAmountInput(pendiente.toString());
+                      }}
+                      iconName="credit-card"
+                      isSelected={method === "tarjeta"}
+                      style={styles.methodBtn}
+                    />
+                    <CustomButton
+                      title="Transferencia"
+                      onPress={() => {
+                        setMethod("transferencia");
+                        setAmountInput(pendiente.toString());
+                      }}
+                      iconName="money-bill-transfer"
+                      isSelected={method === "transferencia"}
+                      style={styles.methodBtn}
+                    />
+                  </View>
+
+                  {method && (
+                    <View style={styles.addPagoRow}>
+                      <TextInput
+                        placeholder="Monto"
+                        value={amountInput}
+                        onChangeText={setAmountInput}
+                        keyboardType="numeric"
+                        style={styles.input}
+                      />
+                      <Pressable
+                        style={styles.addBtn}
+                        onPress={handleAgregarPago}
+                      >
+                        <FontAwesome6 name="plus" size={18} color="white" />
+                        <Text
+                          style={{
+                            color: "white",
+                            fontWeight: "bold",
+                            marginLeft: 8,
+                          }}
+                        >
+                          Agregar
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </>
+              )}
+
+              <View style={{ marginTop: 25 }}>
                 <CustomButton
                   title="Procesar Venta"
                   onPress={handleConfirm}
+                  disabled={pendiente > 0}
+                  style={
+                    pendiente > 0 ? { backgroundColor: "#ccc" } : undefined
+                  }
                 />
               </View>
             </View>
           )}
+          <PreviewModal
+            visible={showPreview}
+            pdfUri={pdfUri}
+            htmlContent={previewHtml}
+            onClose={() => setShowPreview(false)}
+          />
         </View>
       </View>
     </Modal>
@@ -286,42 +407,114 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   printButton: {
+    backgroundColor: "#17a2b8",
+    padding: 15,
+  },
+  pdfButton: {
     backgroundColor: "#28a745",
-    height: 60,
+    padding: 15,
   },
   finishButton: {
     backgroundColor: "#007bff",
-    height: 60,
+    padding: 15,
   },
   paymentSelection: {
     gap: 15,
   },
   amountText: {
-    fontSize: 40,
+    fontSize: 32,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 10,
+    color: "#333",
+  },
+  pendienteText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#dc3545",
+  },
+  cambioText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#28a745",
   },
   methodLabel: {
     fontSize: 18,
     color: "#666",
     textAlign: "center",
-    marginBottom: 10,
+    marginTop: 10,
+    marginBottom: 5,
   },
   methodsRow: {
+    flexDirection: "row",
     gap: 10,
+    justifyContent: "space-between",
+  },
+  methodBtn: {
+    flex: 1,
+    padding: 10,
+  },
+  pagosList: {
+    backgroundColor: "#f8f9fa",
+    borderRadius: 8,
+    padding: 10,
+    gap: 8,
+    marginBottom: 10,
+  },
+  pagoItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 10,
+    backgroundColor: "#fff",
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  pagoItemText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  addPagoRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
   },
   input: {
+    flex: 2,
     borderWidth: 1,
     borderColor: "#ccc",
-    padding: 15,
-    borderRadius: 10,
+    padding: 12,
+    borderRadius: 8,
     fontSize: 18,
     backgroundColor: "#fafafa",
   },
-  changeText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
+  addBtn: {
+    flex: 1,
+    backgroundColor: "#ffc107",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  previewContainer: {
+    width: "100%",
+    height: 220,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 12,
+    overflow: "hidden",
+    marginVertical: 15,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  webViewStyle: {
+    flex: 1,
+    width: "100%",
   },
 });

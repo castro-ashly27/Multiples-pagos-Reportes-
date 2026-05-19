@@ -1,11 +1,10 @@
-import { PaymentMethod } from "../../store/cartStore";
 import { db } from "../database";
 
 export const SaleRepository = {
-  async create(total: number, payment: PaymentMethod) {
+  async create(total: number, cambio: number = 0) {
     return (await db).runAsync(
-      `INSERT INTO ventas (total, metodo_pago, monto_pagado, cambio) VALUES(?, ?, ?, ?)`,
-      [total, payment.tipo, payment.monto, payment.cambio || 0]
+      `INSERT INTO ventas (total, cambio) VALUES(?, ?)`,
+      [total, cambio]
     );
   },
   // Nuevo: Obtener todas las ventas para el historial
@@ -50,5 +49,57 @@ export const SaleRepository = {
     for (const m of movements) {
       await MovementRepository.cancel(m.id);
     }
+  },
+
+  async getByDateRange(startDate: string, endDate: string) {
+    const database = await db;
+    return database.getAllAsync<any>(
+      `SELECT * FROM ventas WHERE date(fecha) >= date(?) AND date(fecha) <= date(?) ORDER BY fecha DESC`,
+      [startDate, endDate]
+    );
+  },
+
+  async getReportSummary(startDate: string, endDate: string) {
+    const database = await db;
+    
+    const stats = await database.getFirstAsync<any>(
+      `SELECT COUNT(*) as totalVentas, SUM(total) as totalMonto, 
+       SUM(CASE WHEN estado = 'anulado' THEN 1 ELSE 0 END) as anuladas 
+       FROM ventas 
+       WHERE date(fecha) >= date(?) AND date(fecha) <= date(?)`,
+      [startDate, endDate]
+    );
+
+    const pagos = await database.getAllAsync<any>(
+      `SELECT pv.metodo, SUM(pv.monto) as total
+       FROM pagos_venta pv
+       JOIN ventas v ON pv.venta_id = v.id
+       WHERE date(v.fecha) >= date(?) AND date(v.fecha) <= date(?) AND v.estado != 'anulado'
+       GROUP BY pv.metodo`,
+      [startDate, endDate]
+    );
+
+    const pagosLegacy = await database.getAllAsync<any>(
+      `SELECT metodo_pago as metodo, SUM(monto_pagado) as total
+       FROM ventas
+       WHERE date(fecha) >= date(?) AND date(fecha) <= date(?) AND estado != 'anulado' AND metodo_pago IS NOT NULL
+       GROUP BY metodo_pago`,
+      [startDate, endDate]
+    );
+
+    const methodTotals: Record<string, number> = {};
+    for (const p of pagos) {
+      methodTotals[p.metodo] = (methodTotals[p.metodo] || 0) + p.total;
+    }
+    for (const p of pagosLegacy) {
+      if (p.metodo) {
+         methodTotals[p.metodo] = (methodTotals[p.metodo] || 0) + p.total;
+      }
+    }
+
+    return {
+      stats: stats || { totalVentas: 0, totalMonto: 0, anuladas: 0 },
+      methodTotals
+    };
   },
 };
