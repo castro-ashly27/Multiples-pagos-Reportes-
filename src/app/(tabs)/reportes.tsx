@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { PrintService } from "../../services/printService";
 import { SaleRepository } from "../../database/repositories/saleRepository";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 export default function Reportes() {
   const [rango, setRango] = useState<"hoy" | "semana" | "mes" | "custom">(
@@ -23,6 +24,7 @@ export default function Reportes() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPicker, setShowPicker] = useState<"desde" | "hasta" | null>(null);
 
   const [resumen, setResumen] = useState<any>(null);
   const [ventas, setVentas] = useState<any[]>([]);
@@ -30,6 +32,16 @@ export default function Reportes() {
   // Función para formatear fecha a YYYY-MM-DD
   const formatDate = (date: Date) => {
     return date.toISOString().split("T")[0];
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    const currentPicker = showPicker;
+    setShowPicker(null);
+    if (selectedDate) {
+      const formattedDate = formatDate(selectedDate);
+      if (currentPicker === "desde") setDesde(formattedDate);
+      else if (currentPicker === "hasta") setHasta(formattedDate);
+    }
   };
 
   useFocusEffect(
@@ -175,21 +187,21 @@ export default function Reportes() {
           <View style={styles.customDateContainer}>
             <View style={styles.dateInputWrapper}>
               <Text style={styles.dateLabel}>Desde</Text>
-              <TextInput
-                style={styles.dateInput}
-                placeholder="YYYY-MM-DD"
-                value={desde}
-                onChangeText={setDesde}
-              />
+              <TouchableOpacity 
+                style={styles.dateInput} 
+                onPress={() => setShowPicker("desde")}
+              >
+                <Text>{desde || "Seleccionar..."}</Text>
+              </TouchableOpacity>
             </View>
             <View style={styles.dateInputWrapper}>
               <Text style={styles.dateLabel}>Hasta</Text>
-              <TextInput
-                style={styles.dateInput}
-                placeholder="YYYY-MM-DD"
-                value={hasta}
-                onChangeText={setHasta}
-              />
+              <TouchableOpacity 
+                style={styles.dateInput} 
+                onPress={() => setShowPicker("hasta")}
+              >
+                <Text>{hasta || "Seleccionar..."}</Text>
+              </TouchableOpacity>
             </View>
             <TouchableOpacity
               style={styles.consultarBtn}
@@ -197,6 +209,15 @@ export default function Reportes() {
             >
               <FontAwesome6 name="magnifying-glass" size={16} color="white" />
             </TouchableOpacity>
+
+            {showPicker && (
+              <DateTimePicker
+                value={new Date()}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
           </View>
         )}
       </View>

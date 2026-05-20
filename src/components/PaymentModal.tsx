@@ -70,10 +70,20 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
       return;
     }
 
+    // Validación de exceso de pago al usar múltiples métodos o métodos que no son solo efectivo
+    const isOnlyEfectivo = pagos.length === 0 && method === "efectivo";
+    if (!isOnlyEfectivo && monto > pendiente) {
+      Alert.alert(
+        "Error",
+        `El monto no puede exceder el saldo pendiente (C$${pendiente.toFixed(2)}) al usar múltiples métodos de pago o un método diferente a efectivo.`
+      );
+      return;
+    }
+
     // Agregar el pago a la lista
     setPagos([...pagos, { tipo: method, monto }]);
 
-    // Resetear selección
+    // Resetear selección actual (el botón seguirá iluminado si está en la lista de pagos)
     setMethod(null);
     setAmountInput("");
   };
@@ -276,7 +286,7 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
                         setAmountInput(pendiente.toString());
                       }}
                       iconName="money-bill"
-                      isSelected={method === "efectivo"}
+                      isSelected={method === "efectivo" || pagos.some((p) => p.tipo === "efectivo")}
                       style={styles.methodBtn}
                     />
                     <CustomButton
@@ -286,7 +296,7 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
                         setAmountInput(pendiente.toString());
                       }}
                       iconName="credit-card"
-                      isSelected={method === "tarjeta"}
+                      isSelected={method === "tarjeta" || pagos.some((p) => p.tipo === "tarjeta")}
                       style={styles.methodBtn}
                     />
                     <CustomButton
@@ -296,7 +306,7 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
                         setAmountInput(pendiente.toString());
                       }}
                       iconName="money-bill-transfer"
-                      isSelected={method === "transferencia"}
+                      isSelected={method === "transferencia" || pagos.some((p) => p.tipo === "transferencia")}
                       style={styles.methodBtn}
                     />
                   </View>
