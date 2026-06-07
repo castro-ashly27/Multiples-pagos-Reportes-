@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useCallback, useEffect, useState } from "react";
 import { ProductCard } from "../../components/ProductCard";
 import { router, useFocusEffect } from "expo-router";
+import { SalePaymentRepository } from "../../database/repositories/salePaymentRepository";
 
 interface Producto {
   id: number;
@@ -15,6 +16,7 @@ interface Producto {
 
 export default function Inventario() {
   const [productos, setProductos] = useState<Producto[]>([]);
+  //const [impuesto, setImpuesto] = useState("0.15");
 
   const deleteProduct = async (id: number) => {
     Alert.alert(

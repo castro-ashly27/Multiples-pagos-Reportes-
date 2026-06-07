@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useCartStore } from "../store/cartStore";
 import CustomButton from "./CustomButton";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { PrintService, PrintSaleData } from "../services/printService";
 import { SaleRepository } from "../database/repositories/saleRepository";
@@ -19,6 +19,7 @@ import { saleDetailRepository } from "../database/repositories/saleDetailReposit
 import { MovementRepository } from "../database/repositories/movementRepository";
 import { ProductRepository } from "../database/repositories/productRepository";
 import { SalePaymentRepository } from "../database/repositories/salePaymentRepository";
+import { CompanyRepository } from "../database/repositories/companyRepository";
 import { WebView } from "react-native-webview";
 import PreviewModal from "./PreviewModal";
 
@@ -33,9 +34,10 @@ interface PaymentEntry {
 }
 
 export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
-  const total = useCartStore((state) => state.total);
+  const subTotal = useCartStore((state) => state.total);
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
+  const selectedCustomer = useCartStore((state) => state.selectedCustomer);
 
   // Estados de control general
   const [ventaExitosa, setVentaExitosa] = useState(false);
@@ -45,6 +47,18 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Estado de empresa y configuración
+  const [empresa, setEmpresa] = useState<any>(null);
+
+  useEffect(() => {
+    if (visible) {
+      CompanyRepository.get().then(setEmpresa);
+    }
+  }, [visible]);
+
+  const impuestoMonto = empresa?.aplica_impuesto ? subTotal * (empresa.porcentaje_impuesto / 100) : 0;
+  const total = subTotal + impuestoMonto;
 
   // Estado de múltiples pagos
   const [pagos, setPagos] = useState<PaymentEntry[]>([]);
@@ -104,7 +118,7 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
 
     try {
       // 1. Crear venta (con el cambio si hubo)
-      const resultSale = await SaleRepository.create(total, cambio);
+      const resultSale = await SaleRepository.create(total, cambio, selectedCustomer?.id, impuestoMonto);
       const ventaId = resultSale.lastInsertRowId;
 
       // 2. Registrar los pagos múltiples
@@ -121,7 +135,10 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
           item.quantity,
           ventaId
         );
-        await ProductRepository.adjustStock(item.product.id, -item.quantity);
+        // Sólo ajustamos stock si es un producto real (id >= 0)
+        if (item.product.id >= 0) {
+          await ProductRepository.adjustStock(item.product.id, -item.quantity);
+        }
         await saleDetailRepository.create(
           ventaId,
           item.product.id,
@@ -144,6 +161,10 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
     pagos: pagos,
     cambio: cambio,
     fecha: new Date().toLocaleString(),
+    subTotal: subTotal,
+    impuestoMonto: impuestoMonto,
+    empresa: empresa,
+    clienteNombre: selectedCustomer ? selectedCustomer.nombre : undefined,
   });
 
   const handlePrintTicket = async () => {
@@ -169,7 +190,10 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
     try {
       const html = PrintService.getFullPageHtml(getSaleDataForPrint(), items);
       setPreviewHtml(html);
-      const uri = await PrintService.printFullPage(getSaleDataForPrint(), items);
+      const uri = await PrintService.printFullPage(
+        getSaleDataForPrint(),
+        items
+      );
       setPdfUri(uri);
       setShowPreview(true);
     } catch (error) {
@@ -286,7 +310,10 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
                         setAmountInput(pendiente.toString());
                       }}
                       iconName="money-bill"
-                      isSelected={method === "efectivo" || pagos.some((p) => p.tipo === "efectivo")}
+                      isSelected={
+                        method === "efectivo" ||
+                        pagos.some((p) => p.tipo === "efectivo")
+                      }
                       style={styles.methodBtn}
                     />
                     <CustomButton
@@ -296,7 +323,10 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
                         setAmountInput(pendiente.toString());
                       }}
                       iconName="credit-card"
-                      isSelected={method === "tarjeta" || pagos.some((p) => p.tipo === "tarjeta")}
+                      isSelected={
+                        method === "tarjeta" ||
+                        pagos.some((p) => p.tipo === "tarjeta")
+                      }
                       style={styles.methodBtn}
                     />
                     <CustomButton
@@ -306,7 +336,10 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
                         setAmountInput(pendiente.toString());
                       }}
                       iconName="money-bill-transfer"
-                      isSelected={method === "transferencia" || pagos.some((p) => p.tipo === "transferencia")}
+                      isSelected={
+                        method === "transferencia" ||
+                        pagos.some((p) => p.tipo === "transferencia")
+                      }
                       style={styles.methodBtn}
                     />
                   </View>

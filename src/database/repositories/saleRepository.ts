@@ -1,10 +1,10 @@
 import { db } from "../database";
 
 export const SaleRepository = {
-  async create(total: number, cambio: number = 0) {
+  async create(total: number, cambio: number = 0, cliente_id?: number, impuesto_aplicado: number = 0) {
     return (await db).runAsync(
-      `INSERT INTO ventas (total, cambio) VALUES(?, ?)`,
-      [total, cambio]
+      `INSERT INTO ventas (total, cambio, cliente_id, impuesto_aplicado) VALUES(?, ?, ?, ?)`,
+      [total, cambio, cliente_id || null, impuesto_aplicado]
     );
   },
   // Nuevo: Obtener todas las ventas para el historial

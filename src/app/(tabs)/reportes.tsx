@@ -16,6 +16,7 @@ import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { PrintService } from "../../services/printService";
 import { SaleRepository } from "../../database/repositories/saleRepository";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { CompanyRepository } from "../../database/repositories/companyRepository";
 
 export default function Reportes() {
   const [rango, setRango] = useState<"hoy" | "semana" | "mes" | "custom">(
@@ -105,7 +106,8 @@ export default function Reportes() {
     }
 
     try {
-      await PrintService.printSalesReport(ventas, resumen, { desde, hasta });
+      const empresa = await CompanyRepository.get();
+      await PrintService.printSalesReport(ventas, resumen, { desde, hasta }, empresa);
     } catch (error) {
       Alert.alert("Error", "No se pudo exportar el PDF.");
     }

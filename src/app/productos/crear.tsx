@@ -1,15 +1,24 @@
-import { Alert, Button, StyleSheet, Text } from "react-native";
+import { Alert, Button, StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import InputField from "../../components/InputFiles";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProductRepository } from "../../database/repositories/productRepository";
+import { CategoryRepository } from "../../database/repositories/categoryRepository";
 import { router } from "expo-router";
 
-export default function CrarProducto() {
+export default function CrearProducto() {
   const [nombre, setNombre] = useState("");
   const [codigo, setCodigo] = useState("");
   const [precio, setPrecio] = useState("");
   const [stock, setStock] = useState("");
+  const [imagen, setImagen] = useState("");
+  
+  const [categorias, setCategorias] = useState<any[]>([]);
+  const [categoriaId, setCategoriaId] = useState<number | null>(null);
+
+  useEffect(() => {
+    CategoryRepository.getAll().then(setCategorias);
+  }, []);
 
   const validar = () => {
     if (!nombre.trim()) {
@@ -47,7 +56,9 @@ export default function CrarProducto() {
         nombre,
         Number(precio),
         Number(stock),
-        codigo
+        codigo,
+        categoriaId || undefined,
+        imagen || undefined
       );
       Alert.alert("Éxito", "Producto creado exitosamente.");
     } catch (error) {
@@ -58,24 +69,56 @@ export default function CrarProducto() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Nuevo Producto</Text>
-      <InputField
-        placeholder="Nombre"
-        value={nombre}
-        onChangeText={setNombre}
-      />
-      <InputField
-        placeholder="Código"
-        value={codigo}
-        onChangeText={setCodigo}
-      />
-      <InputField
-        placeholder="Precio"
-        value={precio}
-        onChangeText={setPrecio}
-      />
-      <InputField placeholder="Stock" value={stock} onChangeText={setStock} />
-      <Button title="Guardar" onPress={guardar} />
+      <ScrollView>
+        <Text style={styles.title}>Nuevo Producto</Text>
+        <InputField
+          placeholder="Nombre"
+          value={nombre}
+          onChangeText={setNombre}
+        />
+        <InputField
+          placeholder="Código"
+          value={codigo}
+          onChangeText={setCodigo}
+        />
+        <InputField
+          placeholder="Precio"
+          value={precio}
+          onChangeText={setPrecio}
+        />
+        <InputField placeholder="Stock" value={stock} onChangeText={setStock} />
+        
+        <Text style={styles.label}>URL de Imagen</Text>
+        <TextInput
+          style={styles.textInput}
+          placeholder="https://..."
+          value={imagen}
+          onChangeText={setImagen}
+        />
+
+        <Text style={styles.label}>Categoría</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catContainer}>
+          <TouchableOpacity
+            style={[styles.catPill, categoriaId === null && styles.catPillSelected]}
+            onPress={() => setCategoriaId(null)}
+          >
+            <Text style={[styles.catText, categoriaId === null && styles.catTextSelected]}>Ninguna</Text>
+          </TouchableOpacity>
+          {categorias.map(cat => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.catPill, categoriaId === cat.id && styles.catPillSelected]}
+              onPress={() => setCategoriaId(cat.id)}
+            >
+              <Text style={[styles.catText, categoriaId === cat.id && styles.catTextSelected]}>{cat.nombre}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <View style={{marginTop: 20}}>
+          <Button title="Guardar" onPress={guardar} />
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -84,10 +127,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
+    backgroundColor: '#fff'
   },
   title: {
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 20,
   },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 10,
+    marginBottom: 5,
+    color: '#333'
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  catContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  catPill: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    backgroundColor: '#eee',
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  catPillSelected: {
+    backgroundColor: '#007bff',
+  },
+  catText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  catTextSelected: {
+    color: '#fff',
+  }
 });
