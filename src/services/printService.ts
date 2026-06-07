@@ -7,6 +7,10 @@ export interface PrintSaleData {
   pagos: { tipo: string; monto: number; referencia?: string }[];
   cambio: number;
   fecha: string;
+  subTotal?: number;
+  impuestoMonto?: number;
+  empresa?: any;
+  clienteNombre?: string;
 }
 
 export interface PrintItem {
@@ -28,6 +32,8 @@ export const PrintService = {
       .join("");
 
     const totalPagado = venta.pagos.reduce((sum, p) => sum + p.monto, 0);
+    const empresaNombre = venta.empresa?.nombre || "MBPos";
+    const empresaDir = venta.empresa?.direccion ? `<div class="center">${venta.empresa.direccion}</div>` : "";
 
     return `
       <html>
@@ -50,11 +56,13 @@ export const PrintService = {
           </style>
         </head>
         <body>
-          <div class="center header">MBPos</div>
+          <div class="center header">${empresaNombre}</div>
+          ${empresaDir}
           <div class="center">Ticket de Venta</div>
           <div class="divider"></div>
           <div><b>ID Venta:</b> #${venta.id}</div>
           <div><b>Fecha:</b> ${venta.fecha}</div>
+          <div><b>Cliente:</b> ${venta.clienteNombre || 'General'}</div>
           <div class="divider"></div>
           <table>
             <thead>
@@ -66,20 +74,22 @@ export const PrintService = {
             </thead>
             <tbody>
               ${items
-        .map(
-          (item) => `
+                .map(
+                  (item) => `
                 <tr>
                   <td>${item.quantity}</td>
                   <td>${item.product.nombre}</td>
                   <td style="text-align: right;">C$${(item.quantity * item.product.precio).toFixed(2)}</td>
                 </tr>
               `
-        )
-        .join("")}
+                )
+                .join("")}
             </tbody>
           </table>
           <div class="divider"></div>
           <div class="total-section">
+            ${venta.subTotal ? `<div><b>SUBTOTAL: C$${venta.subTotal.toFixed(2)}</b></div>` : ""}
+            ${venta.impuestoMonto ? `<div><b>IMPUESTO: C$${venta.impuestoMonto.toFixed(2)}</b></div>` : ""}
             <div style="font-size: 16px;"><b>TOTAL: C$${venta.total.toFixed(2)}</b></div>
             <div class="divider"></div>
             ${pagosHtml}
@@ -122,6 +132,7 @@ export const PrintService = {
       .join("");
 
     const totalPagado = venta.pagos.reduce((sum, p) => sum + p.monto, 0);
+    const empresaNombre = venta.empresa?.nombre || "MBPos";
 
     return `
       <html>
@@ -145,8 +156,9 @@ export const PrintService = {
         </head>
         <body>
           <div class="header">
-            <h1>MBPos</h1>
+            <h1>${empresaNombre}</h1>
             <p>Factura de Venta</p>
+            ${venta.empresa?.direccion ? `<p>${venta.empresa.direccion}</p>` : ''}
           </div>
           <div class="details">
             <div>
@@ -154,7 +166,7 @@ export const PrintService = {
               <b>Fecha:</b> ${venta.fecha}
             </div>
             <div style="text-align: right;">
-              <b>Cliente:</b> Público en General
+              <b>Cliente:</b> ${venta.clienteNombre || "Público en General"}
             </div>
           </div>
           <table>
@@ -168,8 +180,8 @@ export const PrintService = {
             </thead>
             <tbody>
               ${items
-        .map(
-          (item) => `
+                .map(
+                  (item) => `
                 <tr>
                   <td>${item.product.nombre}</td>
                   <td>C$${item.product.precio.toFixed(2)}</td>
@@ -177,13 +189,15 @@ export const PrintService = {
                   <td style="text-align: right;">C$${(item.quantity * item.product.precio).toFixed(2)}</td>
                 </tr>
               `
-        )
-        .join("")}
+                )
+                .join("")}
             </tbody>
           </table>
           
           <div class="totals">
             <table>
+              ${venta.subTotal ? `<tr><td>SUBTOTAL:</td><td style="text-align: right;">C$${venta.subTotal.toFixed(2)}</td></tr>` : ""}
+              ${venta.impuestoMonto ? `<tr><td>IMPUESTO:</td><td style="text-align: right;">C$${venta.impuestoMonto.toFixed(2)}</td></tr>` : ""}
               <tr class="grand-total">
                 <td>TOTAL:</td>
                 <td style="text-align: right;">C$${venta.total.toFixed(2)}</td>
@@ -194,14 +208,15 @@ export const PrintService = {
                 <td>TOTAL PAGADO:</td>
                 <td style="text-align: right;">C$${totalPagado.toFixed(2)}</td>
               </tr>
-              ${venta.cambio > 0
-        ? `
+              ${
+                venta.cambio > 0
+                  ? `
               <tr>
                 <td>CAMBIO:</td>
                 <td style="text-align: right; color: #dc3545;">C$${venta.cambio.toFixed(2)}</td>
               </tr>`
-        : ""
-      }
+                  : ""
+              }
             </table>
           </div>
           
@@ -231,7 +246,8 @@ export const PrintService = {
   printSalesReport: async (
     ventas: any[],
     resumen: any,
-    rango: { desde: string; hasta: string }
+    rango: { desde: string; hasta: string },
+    empresa?: any
   ) => {
     const metodosHtml = Object.entries(resumen.methodTotals)
       .map(
@@ -258,7 +274,8 @@ export const PrintService = {
         <head>
           <style>
             body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
-            h1 { text-align: center; color: #0ab546; }
+            h1 { text-align: center; color: #0ab546; margin-bottom: 5px; }
+            h2 { text-align: center; color: #555; margin-top: 0; }
             .header-info { text-align: center; margin-bottom: 30px; color: #555; }
             .summary-cards { display: flex; justify-content: space-between; margin-bottom: 30px; gap: 15px; }
             .card { background: #f8f9fa; padding: 15px; border-radius: 8px; flex: 1; text-align: center; border: 1px solid #ddd; }
@@ -272,7 +289,8 @@ export const PrintService = {
           </style>
         </head>
         <body>
-          <h1>Reporte de Ventas</h1>
+          <h1>${empresa?.nombre || 'MBPos'}</h1>
+          <h2>Reporte de Ventas</h2>
           <div class="header-info">
             <p>Período: <b>${rango.desde}</b> al <b>${rango.hasta}</b></p>
           </div>

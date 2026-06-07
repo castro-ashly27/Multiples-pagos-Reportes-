@@ -4,13 +4,40 @@ export const runMigrations = async () => {
   const database = await db;
   await database.execAsync(`
 
+    --DROP TABLE empresa
+
+
     CREATE TABLE IF NOT EXISTS productos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre TEXT NOT NULL,
       precio REAL NOT NULL,
       stock INTEGER DEFAULT 0,
       codigo TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      categoria_id INTEGER,
+      imagen TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS categorias (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS clientes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      telefono TEXT,
+      direccion TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS empresa (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      direccion TEXT,
+      logo TEXT,
+      aplica_impuesto INTEGER DEFAULT 0,
+      porcentaje_impuesto REAL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS ventas (
@@ -20,7 +47,10 @@ export const runMigrations = async () => {
       metodo_pago TEXT,
       monto_pagado REAL,
       cambio REAL,
-      estado TEXT DEFAULT "activo"
+      estado TEXT DEFAULT "activo",
+      cliente_id INTEGER,
+      impuesto_aplicado REAL DEFAULT 0,
+      FOREIGN KEY (cliente_id) REFERENCES clientes(id)
     );
 
     CREATE TABLE IF NOT EXISTS detalle_ventas (
@@ -54,6 +84,35 @@ export const runMigrations = async () => {
       FOREIGN KEY (venta_id) REFERENCES ventas(id)
     );
   `);
+
+  // Insertar empresa por defecto si no existe
+  try {
+    const database = await db;
+    const empresa = await database.getFirstAsync("SELECT COUNT(*) as count FROM empresa");
+    if ((empresa as any).count === 0) {
+      await database.runAsync("INSERT INTO empresa (nombre, direccion, logo, aplica_impuesto, porcentaje_impuesto) VALUES ('Mi Empresa', 'Dirección por defecto', '', 0, 0)");
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  // Intentar agregar nuevas columnas a tablas existentes en caso de que ya estén creadas
+  const columnasProductos = [
+    "ALTER TABLE productos ADD COLUMN categoria_id INTEGER REFERENCES categorias(id)",
+    "ALTER TABLE productos ADD COLUMN imagen TEXT"
+  ];
+  for (let col of columnasProductos) {
+    try { await (await db).runAsync(col); } catch (e) {}
+  }
+
+  const columnasVentas = [
+    "ALTER TABLE ventas ADD COLUMN cliente_id INTEGER REFERENCES clientes(id)",
+    "ALTER TABLE ventas ADD COLUMN impuesto_aplicado REAL DEFAULT 0"
+  ];
+  for (let col of columnasVentas) {
+    try { await (await db).runAsync(col); } catch (e) {}
+  }
+
 
   // Intentar agregar columnas (ignorar errores si ya existen)
   try {

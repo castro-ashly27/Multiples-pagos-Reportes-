@@ -11,6 +11,11 @@ export const ProductRepository = {
     return database.getFirstAsync(`SELECT * FROM productos WHERE id = ?`, [id]);
   },
 
+  async getByCategory(categoria_id: number) {
+    const database = await db;
+    return database.getAllAsync(`SELECT * FROM productos WHERE categoria_id = ?`, [categoria_id]);
+  },
+
   async search(term: string) {
     const database = await db;
     const like = `%${term}%`;
@@ -20,11 +25,16 @@ export const ProductRepository = {
     );
   },
 
-  async create(nombre: string, precio: number, stock: number, codigo: string) {
+  async getByBarcode(codigo: string) {
+    const database = await db;
+    return database.getFirstAsync(`SELECT * FROM productos WHERE codigo = ?`, [codigo]);
+  },
+
+  async create(nombre: string, precio: number, stock: number, codigo: string, categoria_id?: number, imagen?: string) {
     const database = await db;
     return database.runAsync(
-      `INSERT INTO productos (nombre, precio, stock, codigo) VALUES(?, ?, ?, ?)`,
-      [nombre, precio, stock, codigo]
+      `INSERT INTO productos (nombre, precio, stock, codigo, categoria_id, imagen) VALUES(?, ?, ?, ?, ?, ?)`,
+      [nombre, precio, stock, codigo, categoria_id || null, imagen || null]
     );
   },
 
@@ -41,12 +51,14 @@ export const ProductRepository = {
     nombre: string,
     precio: number,
     stock: number,
-    codigo: string
+    codigo: string,
+    categoria_id?: number,
+    imagen?: string
   ) {
     const database = await db;
     await database.runAsync(
-      `UPDATE productos SET nombre = ?, precio = ?, stock = ?, codigo = ? WHERE id = ?`,
-      [nombre, precio, stock, codigo, id]
+      `UPDATE productos SET nombre = ?, precio = ?, stock = ?, codigo = ?, categoria_id = ?, imagen = ? WHERE id = ?`,
+      [nombre, precio, stock, codigo, categoria_id || null, imagen || null, id]
     );
   },
 
