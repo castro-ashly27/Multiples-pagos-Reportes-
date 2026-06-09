@@ -5,7 +5,8 @@
 2. [Req 1: Configuración de Empresa](#req-1-configuración-de-empresa)
 3. [Req 2: Gestión de Productos y Categorías](#req-2-gestión-de-productos-y-categorías)
 4. [Req 3: Mejoras en el Módulo POS](#req-3-mejoras-en-el-módulo-pos)
-5. [Resumen de Archivos](#resumen-de-archivos)
+5. [Req 4: Escáner de Código de Barras y Logo en PDFs](#req-4-escáner-de-código-de-barras-y-logo-en-pdfs)
+6. [Resumen de Archivos](#resumen-de-archivos)
 
 ---
 
@@ -581,6 +582,39 @@ clearCart: () => set({ items: [], total: 0, selectedCustomer: null }),
 
 ---
 
+## Req 4: Escáner de Código de Barras y Logo en PDFs
+
+### 4.1 Configuración de Permisos
+**Archivo modificado:** `app.json` y `package.json`
+- Se instaló la librería `expo-camera`.
+- Se configuró el plugin en `app.json` para gestionar el aviso nativo de permisos de cámara (`cameraPermission`).
+
+### 4.2 Componente BarcodeScanner
+**Archivo creado:** `src/components/BarcodeScanner.tsx`
+- Un componente Modal reutilizable que muestra la vista de la cámara usando `CameraView`.
+- Incluye el manejo de estados para cuando los permisos están en proceso o denegados, mostrando un botón amigable para "Otorgar Permiso".
+- Permite la lectura rápida de códigos y se cierra automáticamente retornando la data al padre.
+
+### 4.3 Escáner en Creación/Edición de Productos
+**Archivos modificados:** `crear.tsx`, `editar.tsx`
+- Se rediseñó el input de "Código" para colocar un botón flotante con el icono de escáner justo a su lado.
+- Al tocarlo, se abre la cámara, lee el código de barras y llena la caja de texto automáticamente.
+
+### 4.4 Búsqueda Automática en el POS con Selector de Cantidad
+**Archivo modificado:** `src/components/ProductSearch.tsx`
+- Se agregó el botón de escanear en la barra de búsqueda principal.
+- **Flujo optimizado:** Al escanear un código, el sistema hace una consulta exacta con `ProductRepository.getByBarcode()`.
+- Si el producto existe, **se abre instantáneamente la tarjeta de vista previa** (Preview Card).
+- En la vista previa, se agregó un **selector de cantidad** `[ - ] [ 1 ] [ + ]` para que el usuario defina cuántas unidades desea agregar al carrito de un solo paso, mejorando la UX de ventas al por mayor o de varios artículos idénticos.
+
+### 4.5 Logo en los PDFs Generados
+**Archivo modificado:** `src/services/printService.ts`
+- Las plantillas HTML que generan la factura de página completa (`getFullPageHtml`) y el reporte de ventas (`printSalesReport`) fueron actualizadas.
+- Se agregó una etiqueta `<img>` en la cabecera que carga dinámicamente `empresa.logo` (si está configurado).
+- Cuenta con restricciones CSS (`max-height: 100px`, `object-fit: contain`) para no romper el diseño visual del PDF independiente de la resolución del logo.
+
+---
+
 ## Resumen de Archivos
 
 ### Archivos CREADOS (nuevos)
@@ -592,21 +626,23 @@ clearCart: () => set({ items: [], total: 0, selectedCustomer: null }),
 | `src/database/repositories/customerRepository.ts` | Búsqueda y creación de clientes |
 | `src/app/(tabs)/configuracion.tsx` | Pantalla de configuración (empresa + impuestos + categorías) |
 | `src/components/CustomerSelect.tsx` | Componente de selección de cliente en el POS |
+| `src/components/BarcodeScanner.tsx` | Componente reutilizable para escanear códigos de barras usando la cámara |
 
 ### Archivos MODIFICADOS
 
 | Archivo | Cambios realizados |
 |---|---|
+| `app.json` / `package.json` | Plugin instalado y configurado para uso de cámara nativa (`expo-camera`). |
 | `src/database/migrations.ts` | Tablas `empresa`, `categorias`, `clientes`; columnas `categoria_id`, `imagen` en productos; columnas `cliente_id`, `impuesto_aplicado` en ventas |
 | `src/database/repositories/productRepository.ts` | Métodos `getByCategory()`, `getByBarcode()`; parámetros `categoria_id` e `imagen` en `create()` y `update()` |
 | `src/store/cartStore.ts` | Estado `selectedCustomer`, acción `setCustomer`, acción `addGenericItem` con IDs negativos |
-| `src/components/ProductSearch.tsx` | Barra de categorías, barra de búsqueda con icono de barcode, modal de preview, modal de producto genérico, botón de ojo, `useFocusEffect` |
+| `src/components/ProductSearch.tsx` | Barra de categorías, escáner de código de barras, modal de preview rediseñado con selector de cantidad. Búsqueda automática en escaneo. |
 | `src/components/PaymentModal.tsx` | Carga de empresa, cálculo de impuestos dinámico, paso de `subTotal`/`impuestoMonto`/`empresa`/`clienteNombre` al servicio de impresión |
-| `src/services/printService.ts` | Interfaz `PrintSaleData` expandida; nombre de empresa, dirección, desglose de impuestos y nombre de cliente en tickets y facturas; parámetro `empresa` en `printSalesReport` |
+| `src/services/printService.ts` | Interfaz ampliada; logo dinámico añadido a la cabecera de PDFs de Reportes y Facturas. |
 | `src/app/(tabs)/_layout.tsx` | Tab "Configuración" añadido |
 | `src/app/(tabs)/reportes.tsx` | Import de `CompanyRepository`, paso de empresa a `printSalesReport` |
-| `src/app/productos/crear.tsx` | Campo de imagen URL + selector de categoría |
-| `src/app/productos/editar.tsx` | Campo de imagen URL + selector de categoría |
+| `src/app/productos/crear.tsx` | Campo de imagen URL, selector de categoría, e integración del escáner en input Código |
+| `src/app/productos/editar.tsx` | Campo de imagen URL, selector de categoría, e integración del escáner en input Código |
 
 ---
 
