@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { ProductRepository } from "../../database/repositories/productRepository";
 import { CategoryRepository } from "../../database/repositories/categoryRepository";
 import { router, useLocalSearchParams } from "expo-router";
+import { BarcodeScanner } from "../../components/BarcodeScanner";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 interface Producto {
   id: number;
@@ -23,6 +25,7 @@ export default function EditarProducto() {
   const [precio, setPrecio] = useState("");
   const [stock, setStock] = useState("");
   const [imagen, setImagen] = useState("");
+  const [isScannerVisible, setIsScannerVisible] = useState(false);
   
   const [categorias, setCategorias] = useState<any[]>([]);
   const [categoriaId, setCategoriaId] = useState<number | null>(null);
@@ -107,11 +110,18 @@ export default function EditarProducto() {
           value={nombre}
           onChangeText={setNombre}
         />
-        <InputField
-          placeholder="Código"
-          value={codigo}
-          onChangeText={setCodigo}
-        />
+        <View style={styles.codigoContainer}>
+          <View style={{flex: 1}}>
+            <InputField
+              placeholder="Código"
+              value={codigo}
+              onChangeText={setCodigo}
+            />
+          </View>
+          <TouchableOpacity style={styles.scanBtn} onPress={() => setIsScannerVisible(true)}>
+            <MaterialCommunityIcons name="barcode-scan" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
         <InputField
           placeholder="Precio"
           value={precio}
@@ -150,6 +160,15 @@ export default function EditarProducto() {
           <Button title="Guardar" onPress={guardar} />
         </View>
       </ScrollView>
+
+      <BarcodeScanner 
+        visible={isScannerVisible}
+        onClose={() => setIsScannerVisible(false)}
+        onScan={(data) => {
+          setCodigo(data);
+          setIsScannerVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -199,5 +218,19 @@ const styles = StyleSheet.create({
   },
   catTextSelected: {
     color: '#fff',
+  },
+  codigoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  scanBtn: {
+    backgroundColor: '#007bff',
+    padding: 10,
+    borderRadius: 8,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   }
 });

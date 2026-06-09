@@ -156,6 +156,7 @@ export const PrintService = {
         </head>
         <body>
           <div class="header">
+            ${venta.empresa?.logo ? `<img src="${venta.empresa.logo}" style="max-height: 80px; max-width: 200px; object-fit: contain; margin-bottom: 10px;" /><br/>` : ''}
             <h1>${empresaNombre}</h1>
             <p>Factura de Venta</p>
             ${venta.empresa?.direccion ? `<p>${venta.empresa.direccion}</p>` : ''}
@@ -289,6 +290,7 @@ export const PrintService = {
           </style>
         </head>
         <body>
+          ${empresa?.logo ? `<div style="text-align: center; margin-bottom: 10px;"><img src="${empresa.logo}" style="max-height: 100px; max-width: 250px; object-fit: contain;" /></div>` : ''}
           <h1>${empresa?.nombre || 'MBPos'}</h1>
           <h2>Reporte de Ventas</h2>
           <div class="header-info">

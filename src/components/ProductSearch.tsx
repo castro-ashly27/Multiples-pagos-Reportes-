@@ -14,6 +14,7 @@ import { CategoryRepository } from "../database/repositories/categoryRepository"
 import { useCartStore } from "../store/cartStore";
 import { useRouter, useFocusEffect } from "expo-router";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import { BarcodeScanner } from "./BarcodeScanner";
 
 export interface Product {
   id: number;
@@ -40,6 +41,10 @@ export default function ProductSearch() {
   // Preview Modal state
   const [previewModal, setPreviewModal] = useState(false);
   const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
+  const [previewQuantity, setPreviewQuantity] = useState(1);
+
+  // Scanner state
+  const [isScannerVisible, setIsScannerVisible] = useState(false);
 
   const addItem = useCartStore((state) => state.addItem);
   const addGenericItem = useCartStore((state) => state.addGenericItem);
@@ -56,8 +61,11 @@ export default function ProductSearch() {
     setCategories(cats);
   };
 
-  const handleAddToCart = (product: Product) => {
-    addItem(product);
+  const handleAddToCart = (product: Product, quantity: number = 1) => {
+    // We loop to add multiple if the store doesn't support a quantity param directly
+    for(let i=0; i<quantity; i++) {
+      addItem(product);
+    }
     setQuery("");
     setResults([]);
     setSelectedCategory(null);
@@ -69,11 +77,6 @@ export default function ProductSearch() {
       const matches = await ProductRepository.search(text.trim());
       const typedMatches = matches as Product[];
       setResults(typedMatches);
-
-      // Si hay un escaneo rápido exacto (ej. lector de código de barras)
-      if (typedMatches.length === 1 && typedMatches[0].codigo === text.trim()) {
-        handleAddToCart(typedMatches[0]);
-      }
     } else {
       setResults([]);
     }
@@ -84,7 +87,7 @@ export default function ProductSearch() {
     if (!query.trim()) return;
     const product = await ProductRepository.getByBarcode(query.trim());
     if (product) {
-      handleAddToCart(product as Product);
+      setResults([product as Product]);
     }
   };
 
@@ -113,6 +116,7 @@ export default function ProductSearch() {
 
   const showPreview = (product: Product) => {
     setPreviewProduct(product);
+    setPreviewQuantity(1);
     setPreviewModal(true);
   };
 
@@ -133,15 +137,18 @@ export default function ProductSearch() {
       </View>
 
       <View style={styles.searchBar}>
-        <FontAwesome6 name="barcode" size={20} color="#666" style={{marginRight: 10}} />
+        <FontAwesome6 name="magnifying-glass" size={18} color="#666" style={{marginRight: 10}} />
         <TextInput
           style={styles.input}
-          placeholder="Buscar producto o escanear código..."
+          placeholder="Buscar producto o escanear..."
           value={query}
           onChangeText={handleSearch}
           onSubmitEditing={handleBarcodeSubmit}
           autoFocus={true} // Good for barcode scanners
         />
+        <TouchableOpacity style={styles.scanIconBtn} onPress={() => setIsScannerVisible(true)}>
+          <FontAwesome6 name="barcode" size={20} color="#007bff" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.categoryContainer}>
@@ -170,8 +177,7 @@ export default function ProductSearch() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.item}
-              onPress={() => handleAddToCart(item)}
-              onLongPress={() => showPreview(item)}
+              onPress={() => showPreview(item)}
             >
               <View style={styles.itemContent}>
                 <View style={{flex: 1}}>
@@ -240,10 +246,27 @@ export default function ProductSearch() {
             <Text style={styles.previewCode}>Código: {previewProduct?.codigo}</Text>
             <Text style={styles.previewPrice}>C${previewProduct?.precio?.toFixed(2)}</Text>
             <Text style={styles.previewStock}>Stock disponible: {previewProduct?.stock}</Text>
+            
+            <View style={styles.quantityContainer}>
+              <TouchableOpacity 
+                style={styles.qtyBtn} 
+                onPress={() => setPreviewQuantity(Math.max(1, previewQuantity - 1))}
+              >
+                <FontAwesome6 name="minus" size={16} color="#333" />
+              </TouchableOpacity>
+              <Text style={styles.qtyText}>{previewQuantity}</Text>
+              <TouchableOpacity 
+                style={styles.qtyBtn} 
+                onPress={() => setPreviewQuantity(previewQuantity + 1)}
+              >
+                <FontAwesome6 name="plus" size={16} color="#333" />
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity 
               style={styles.previewAddBtn}
               onPress={() => {
-                if (previewProduct) handleAddToCart(previewProduct);
+                if (previewProduct) handleAddToCart(previewProduct, previewQuantity);
                 setPreviewModal(false);
               }}
             >
@@ -252,6 +275,22 @@ export default function ProductSearch() {
           </View>
         </View>
       </Modal>
+
+      <BarcodeScanner 
+        visible={isScannerVisible}
+        onClose={() => setIsScannerVisible(false)}
+        onScan={async (data) => {
+          setIsScannerVisible(false);
+          setQuery(data);
+          const product = await ProductRepository.getByBarcode(data);
+          if (product) {
+            setResults([product as Product]);
+            showPreview(product as Product);
+          } else {
+            handleSearch(data);
+          }
+        }}
+      />
 
     </View>
   );
@@ -312,6 +351,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
+  },
+  scanIconBtn: {
+    padding: 10,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
   },
   categoryContainer: {
     marginBottom: 10,
@@ -484,5 +528,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 25,
+    padding: 5,
+  },
+  qtyBtn: {
+    backgroundColor: '#e0e0e0',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginHorizontal: 20,
+    minWidth: 30,
+    textAlign: 'center',
   }
 });
