@@ -7,6 +7,7 @@ interface Product {
   precio: number;
   stock: number;
   codigo: string;
+  aplica_impuesto?: number | boolean;
 }
 
 interface ProductCardProps {
@@ -25,9 +26,14 @@ export const ProductCard = ({
       <View style={{ marginLeft: 10 }}>
         <Text style={styles.name}>{product.nombre}</Text>
         <Text> codigo: {product.codigo}</Text>
-        <Text> precio: {product.precio}</Text>
+        <Text> precio: C${product.precio}</Text>
         <Text> stock: {product.stock}</Text>
         <Text> ID: {product.id}</Text>
+        {product.aplica_impuesto ? (
+          <Text style={{color: 'green', fontSize: 12}}>+ Impuesto</Text>
+        ) : (
+          <Text style={{color: 'gray', fontSize: 12}}>Exento</Text>
+        )}
       </View>
       <View style={styles.actions}>
         <TouchableOpacity onPress={() => onEdit(product.id)}>

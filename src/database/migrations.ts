@@ -138,4 +138,13 @@ export const runMigrations = async () => {
   } catch (e) {
     // La columna ya existe, ignorar
   }
+
+  // Agregar aplica_impuesto a productos
+  try {
+    await database.runAsync(
+      `ALTER TABLE productos ADD COLUMN aplica_impuesto INTEGER DEFAULT 1`
+    );
+  } catch (e) {
+    // La columna ya existe, ignorar
+  }
 };

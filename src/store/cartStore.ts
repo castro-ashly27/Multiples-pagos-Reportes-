@@ -8,6 +8,7 @@ interface Product {
   codigo: string;
   categoria_id?: number;
   imagen?: string;
+  aplica_impuesto?: number | boolean;
 }
 
 interface CartItem {
@@ -56,7 +57,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       nombre,
       precio,
       stock: 9999, // infinite
-      codigo: "GENERIC"
+      codigo: "GENERIC",
+      aplica_impuesto: true
     };
     addItem(genericProduct, 1);
   },

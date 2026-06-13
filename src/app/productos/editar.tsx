@@ -1,4 +1,4 @@
-import { Alert, Button, StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput } from "react-native";
+import { Alert, Button, StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Switch } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import InputField from "../../components/InputFiles";
 import { useEffect, useState } from "react";
@@ -16,6 +16,7 @@ interface Producto {
   codigo: string;
   categoria_id?: number;
   imagen?: string;
+  aplica_impuesto?: number | boolean;
 }
 
 export default function EditarProducto() {
@@ -26,6 +27,7 @@ export default function EditarProducto() {
   const [stock, setStock] = useState("");
   const [imagen, setImagen] = useState("");
   const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const [aplicaImpuesto, setAplicaImpuesto] = useState(true);
   
   const [categorias, setCategorias] = useState<any[]>([]);
   const [categoriaId, setCategoriaId] = useState<number | null>(null);
@@ -69,7 +71,8 @@ export default function EditarProducto() {
         Number(stock),
         codigo,
         categoriaId || undefined,
-        imagen || undefined
+        imagen || undefined,
+        aplicaImpuesto
       );
       Alert.alert("Éxito", "Producto actualizado exitosamente.");
     } catch (error) {
@@ -95,6 +98,7 @@ export default function EditarProducto() {
           setStock(producto.stock.toString());
           setImagen(producto.imagen || "");
           setCategoriaId(producto.categoria_id || null);
+          setAplicaImpuesto(producto.aplica_impuesto !== undefined ? Boolean(producto.aplica_impuesto) : true);
         }
       }
     };
@@ -136,6 +140,11 @@ export default function EditarProducto() {
           value={imagen}
           onChangeText={setImagen}
         />
+
+        <View style={styles.switchContainer}>
+          <Text style={styles.label}>Aplica Impuesto</Text>
+          <Switch value={aplicaImpuesto} onValueChange={setAplicaImpuesto} />
+        </View>
 
         <Text style={styles.label}>Categoría</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catContainer}>
@@ -232,5 +241,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginVertical: 10,
   }
 });
