@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { Modal, StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -76,12 +77,11 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ visible, onScan,
             barcodeScannerSettings={{
               barcodeTypes: ["qr", "ean13", "ean8", "upc_e", "upc_a", "code128", "code39"],
             }}
-          >
-            <View style={styles.overlay}>
-              <View style={styles.scanArea} />
-              <Text style={styles.scanText}>Apunta la cámara al código de barras</Text>
-            </View>
-          </CameraView>
+          />
+          <View style={styles.overlayAbsolute}>
+            <View style={styles.scanArea} />
+            <Text style={styles.scanText}>Apunta la cámara al código de barras</Text>
+          </View>
         </View>
       </SafeAreaView>
     </Modal>
@@ -160,8 +160,8 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
   },
-  overlay: {
-    flex: 1,
+  overlayAbsolute: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',

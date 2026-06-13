@@ -57,7 +57,15 @@ export default function PaymentModal({ visible, onClose }: PaymentModalProps) {
     }
   }, [visible]);
 
-  const impuestoMonto = empresa?.aplica_impuesto ? subTotal * (empresa.porcentaje_impuesto / 100) : 0;
+  const impuestoMonto = empresa?.aplica_impuesto 
+    ? items.reduce((sum, item) => {
+        const aplica = item.product.aplica_impuesto !== undefined ? Boolean(item.product.aplica_impuesto) : true;
+        if (aplica) {
+          return sum + (item.product.precio * item.quantity) * (empresa.porcentaje_impuesto / 100);
+        }
+        return sum;
+      }, 0)
+    : 0;
   const total = subTotal + impuestoMonto;
 
   // Estado de múltiples pagos

@@ -30,11 +30,11 @@ export const ProductRepository = {
     return database.getFirstAsync(`SELECT * FROM productos WHERE codigo = ?`, [codigo]);
   },
 
-  async create(nombre: string, precio: number, stock: number, codigo: string, categoria_id?: number, imagen?: string) {
+  async create(nombre: string, precio: number, stock: number, codigo: string, categoria_id?: number, imagen?: string, aplica_impuesto: boolean = true) {
     const database = await db;
     return database.runAsync(
-      `INSERT INTO productos (nombre, precio, stock, codigo, categoria_id, imagen) VALUES(?, ?, ?, ?, ?, ?)`,
-      [nombre, precio, stock, codigo, categoria_id || null, imagen || null]
+      `INSERT INTO productos (nombre, precio, stock, codigo, categoria_id, imagen, aplica_impuesto) VALUES(?, ?, ?, ?, ?, ?, ?)`,
+      [nombre, precio, stock, codigo, categoria_id || null, imagen || null, aplica_impuesto ? 1 : 0]
     );
   },
 
@@ -53,12 +53,13 @@ export const ProductRepository = {
     stock: number,
     codigo: string,
     categoria_id?: number,
-    imagen?: string
+    imagen?: string,
+    aplica_impuesto: boolean = true
   ) {
     const database = await db;
     await database.runAsync(
-      `UPDATE productos SET nombre = ?, precio = ?, stock = ?, codigo = ?, categoria_id = ?, imagen = ? WHERE id = ?`,
-      [nombre, precio, stock, codigo, categoria_id || null, imagen || null, id]
+      `UPDATE productos SET nombre = ?, precio = ?, stock = ?, codigo = ?, categoria_id = ?, imagen = ?, aplica_impuesto = ? WHERE id = ?`,
+      [nombre, precio, stock, codigo, categoria_id || null, imagen || null, aplica_impuesto ? 1 : 0, id]
     );
   },
 

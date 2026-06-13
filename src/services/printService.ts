@@ -1,5 +1,6 @@
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
 
 export interface PrintSaleData {
   id: number;
@@ -347,9 +348,17 @@ export const PrintService = {
     `;
 
     try {
-      const { uri } = await Print.printToFileAsync({ html });
-      if (uri) {
-        await Sharing.shareAsync(uri, {
+      const { base64 } = await Print.printToFileAsync({ html, base64: true });
+      
+      if (base64) {
+        const pdfName = `${FileSystem.documentDirectory}Reporte_Ventas_${Date.now()}.pdf`;
+        
+        // Escribir el archivo manualmente desde el base64 para garantizar permisos de lectura
+        await FileSystem.writeAsStringAsync(pdfName, base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        await Sharing.shareAsync(pdfName, {
           mimeType: "application/pdf",
           dialogTitle: "Compartir Reporte",
           UTI: "com.adobe.pdf",
