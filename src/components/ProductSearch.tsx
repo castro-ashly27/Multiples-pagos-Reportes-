@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   View,
   Modal,
-  Image
+  Image,
+  Alert
 } from "react-native";
 import { ProductRepository } from "../database/repositories/productRepository";
 import { CategoryRepository } from "../database/repositories/categoryRepository";
@@ -88,6 +89,9 @@ export default function ProductSearch() {
     const product = await ProductRepository.getByBarcode(query.trim());
     if (product) {
       setResults([product as Product]);
+    } else {
+      Alert.alert("Producto no encontrado", "El Producto no existe");
+      setResults([]);
     }
   };
 
@@ -287,7 +291,8 @@ export default function ProductSearch() {
             setResults([product as Product]);
             showPreview(product as Product);
           } else {
-            handleSearch(data);
+            Alert.alert("Producto no encontrado", "El Producto no existe");
+            setResults([]);
           }
         }}
       />
