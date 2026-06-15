@@ -110,11 +110,20 @@ export const PrintService = {
     const html = PrintService.getTicketHtml(venta, items);
 
     try {
-      const { uri } = await Print.printToFileAsync({
+      const { uri, base64 } = await Print.printToFileAsync({
         html,
         width: 226, // 80mm
         height: 425,
+        base64: true,
       });
+
+      if (base64) {
+        const pdfName = `${FileSystem.documentDirectory}Ticket_${venta.id}_${Date.now()}.pdf`;
+        await FileSystem.writeAsStringAsync(pdfName, base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        return pdfName;
+      }
 
       return uri;
     } catch (error) {
@@ -236,7 +245,14 @@ export const PrintService = {
     const html = PrintService.getFullPageHtml(venta, items);
 
     try {
-      const { uri } = await Print.printToFileAsync({ html });
+      const { uri, base64 } = await Print.printToFileAsync({ html, base64: true });
+      if (base64) {
+        const pdfName = `${FileSystem.documentDirectory}Factura_${venta.id}_${Date.now()}.pdf`;
+        await FileSystem.writeAsStringAsync(pdfName, base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        return pdfName;
+      }
       return uri;
     } catch (error) {
       console.error("Error al generar PDF:", error);

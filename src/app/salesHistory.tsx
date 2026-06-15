@@ -103,7 +103,7 @@ export default function SalesHistory() {
           {item.details?.map((detail: any, index: number) => (
             <View key={index} style={{ marginBottom: 6 }}>
               <Text style={{ fontWeight: "bold", fontSize: 15 }}>
-                Producto: {detail.nombre}
+                Producto: {detail.nombre || "Venta de un servicio"}
               </Text>
               <Text>Fecha Venta: {new Date(item.fecha).toLocaleString()}</Text>
               <Text>Cantidad: {detail.cantidad}</Text>

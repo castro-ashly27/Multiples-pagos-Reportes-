@@ -19,7 +19,7 @@ export const saleDetailRepository = {
     return database.getAllAsync<any>(
       `SELECT dv.*, p.nombre 
        FROM detalle_ventas dv 
-       JOIN productos p ON p.id = dv.product_id 
+       LEFT JOIN productos p ON p.id = dv.product_id 
        WHERE dv.venta_id = ?`,
       [ventaId]
     );
