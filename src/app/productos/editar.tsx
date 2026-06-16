@@ -108,7 +108,12 @@ export default function EditarProducto() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        <Text style={styles.title}>Editar Producto</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginTop: 10 }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 10, marginRight: 15, backgroundColor: '#f0f0f0', borderRadius: 25 }}>
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#333" />
+          </TouchableOpacity>
+          <Text style={{ fontSize: 24, fontWeight: "bold" }}>Editar Producto</Text>
+        </View>
         <InputField
           placeholder="Nombre"
           value={nombre}
@@ -185,27 +190,36 @@ export default function EditarProducto() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 15,
     backgroundColor: '#fff'
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 20,
   },
+  backBtn: {
+    marginRight: 10,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 5,
+    marginTop: 15,
+    marginBottom: 8,
     color: '#333'
   },
   textInput: {
     borderWidth: 1,
     borderColor: '#ccc',
-    padding: 10,
+    padding: 14,
     borderRadius: 8,
     marginBottom: 10,
+    fontSize: 16,
+    backgroundColor: '#fafafa',
   },
   catContainer: {
     flexDirection: 'row',

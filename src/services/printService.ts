@@ -309,6 +309,7 @@ export const PrintService = {
         <body>
           ${empresa?.logo ? `<div style="text-align: center; margin-bottom: 10px;"><img src="${empresa.logo}" style="max-height: 100px; max-width: 250px; object-fit: contain;" /></div>` : ''}
           <h1>${empresa?.nombre || 'MBPos'}</h1>
+          ${empresa?.direccion ? `<p style="text-align: center; color: #555; margin-top: -5px; margin-bottom: 15px;">${empresa.direccion}</p>` : ''}
           <h2>Reporte de Ventas</h2>
           <div class="header-info">
             <p>Período: <b>${rango.desde}</b> al <b>${rango.hasta}</b></p>

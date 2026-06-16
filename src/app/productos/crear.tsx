@@ -152,27 +152,29 @@ export default function CrearProducto() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    padding: 15,
     backgroundColor: '#fff'
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 5,
+    marginTop: 15,
+    marginBottom: 8,
     color: '#333'
   },
   textInput: {
     borderWidth: 1,
     borderColor: '#ccc',
-    padding: 10,
+    padding: 14,
     borderRadius: 8,
     marginBottom: 10,
+    fontSize: 16,
+    backgroundColor: '#fafafa',
   },
   catContainer: {
     flexDirection: 'row',

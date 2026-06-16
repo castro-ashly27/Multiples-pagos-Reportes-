@@ -30,7 +30,9 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: "#d0cfcf",
-    padding: 12,
+    padding: 14,
     borderRadius: 8,
+    fontSize: 16,
+    backgroundColor: '#fafafa',
   },
 });
