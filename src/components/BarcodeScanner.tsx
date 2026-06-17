@@ -14,7 +14,7 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ visible, onScan,
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
 
-  // Reset scanned state when modal becomes visible again
+  // Restablecer el estado escaneado cuando el modal vuelva a ser visible
   useEffect(() => {
     if (visible) {
       setScanned(false);
@@ -24,12 +24,12 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ visible, onScan,
   if (!visible) return null;
 
   if (!permission) {
-    // Camera permissions are still loading.
+    // Los permisos de la cámara aún se están cargando.
     return <View />;
   }
 
   if (!permission.granted) {
-    // Camera permissions are not granted yet.
+    // Los permisos de la cámara aún no se han otorgado.
     return (
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
         <SafeAreaView style={styles.container}>
@@ -52,10 +52,10 @@ export const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ visible, onScan,
     if (scanned) return;
     setScanned(true);
     onScan(data);
-    // Give user a moment to see it was scanned before closing or scanning again
+    // Darle al usuario un momento para ver que se escaneó antes de cerrar o escanear de nuevo
     setTimeout(() => {
       setScanned(false);
-      onClose(); // Automatically close after scan in most flows
+      onClose(); // Cerrar automáticamente después de escanear en la mayoría de los flujos
     }, 500);
   };
 
