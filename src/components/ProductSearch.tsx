@@ -192,8 +192,14 @@ export default function ProductSearch() {
                   <Text style={styles.itemPrice}>C${item.precio.toFixed(2)}</Text>
                   <Text style={styles.itemStock}>Stock: {item.stock}</Text>
                 </View>
-                <TouchableOpacity style={{marginLeft: 15, padding: 5}} onPress={() => showPreview(item)}>
-                  <FontAwesome6 name="eye" size={20} color="#007bff" />
+                <TouchableOpacity style={styles.thumbnailBtn} onPress={() => showPreview(item)}>
+                  {item.imagen ? (
+                    <Image source={{ uri: item.imagen }} style={styles.itemThumbnail} />
+                  ) : (
+                    <View style={styles.thumbnailPlaceholder}>
+                      <FontAwesome6 name="image" size={24} color="#ccc" />
+                    </View>
+                  )}
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -398,6 +404,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center'
+  },
+  thumbnailBtn: {
+    marginLeft: 15,
+  },
+  itemThumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+  },
+  thumbnailPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   itemName: {
     fontSize: 16,

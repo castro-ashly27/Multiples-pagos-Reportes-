@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import { useCartStore } from "../store/cartStore";
 import AntDesign from "@expo/vector-icons/AntDesign";
@@ -24,14 +25,22 @@ export default function Cart() {
         keyExtractor={(item) => item.product.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.item}>
-            <View>
-              <Text style={styles.name}>{item.product.nombre}</Text>
-            </View>
-            <View style={styles.itemDetails}>
-              <Text>
-                C$ {item.product.precio.toFixed(2)} x {item.quantity} = C${" "}
-                {(item.product.precio * item.quantity).toFixed(2)}
-              </Text>
+            {item.product.imagen ? (
+              <Image source={{ uri: item.product.imagen }} style={styles.itemImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <AntDesign name="picture" size={24} color="#ccc" />
+              </View>
+            )}
+            <View style={styles.itemContent}>
+              <View>
+                <Text style={styles.name}>{item.product.nombre}</Text>
+              </View>
+              <View style={styles.itemDetails}>
+                <Text style={styles.priceText}>
+                  C$ {item.product.precio.toFixed(2)} x {item.quantity} = C${" "}
+                  {(item.product.precio * item.quantity).toFixed(2)}
+                </Text>
               <View style={styles.controls}>
                 <TouchableOpacity
                   onPress={() =>
@@ -55,6 +64,7 @@ export default function Cart() {
                   <AntDesign name="delete" size={20} color="red" />
                 </TouchableOpacity>
               </View>
+              </View>
             </View>
           </View>
         )}
@@ -74,10 +84,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     marginBottom: 5,
     borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  itemImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  imagePlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  itemContent: {
+    flex: 1,
   },
   itemDetails: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 5,
+  },
+  priceText: {
+    flex: 1,
+    fontSize: 12,
   },
   name: {
     fontWeight: "bold",
