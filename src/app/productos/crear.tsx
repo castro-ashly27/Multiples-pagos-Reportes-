@@ -1,4 +1,4 @@
-import { Alert, Button, StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Switch } from "react-native";
+import { Alert, Button, StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Switch, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import InputField from "../../components/InputFiles";
 import { useState, useEffect } from "react";
@@ -7,6 +7,7 @@ import { CategoryRepository } from "../../database/repositories/categoryReposito
 import { router } from "expo-router";
 import { BarcodeScanner } from "../../components/BarcodeScanner";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { ImageCapture } from "../../components/ImageCapture";
 
 export default function CrearProducto() {
   const [nombre, setNombre] = useState("");
@@ -15,6 +16,7 @@ export default function CrearProducto() {
   const [stock, setStock] = useState("");
   const [imagen, setImagen] = useState("");
   const [isScannerVisible, setIsScannerVisible] = useState(false);
+  const [isCameraVisible, setIsCameraVisible] = useState(false);
   const [aplicaImpuesto, setAplicaImpuesto] = useState(true);
   
   const [categorias, setCategorias] = useState<any[]>([]);
@@ -100,13 +102,20 @@ export default function CrearProducto() {
         />
         <InputField placeholder="Stock" value={stock} onChangeText={setStock} />
         
-        <Text style={styles.label}>URL de Imagen</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="https://..."
-          value={imagen}
-          onChangeText={setImagen}
-        />
+        <Text style={styles.label}>Imagen del Producto</Text>
+        <View style={styles.imageContainer}>
+          {imagen ? (
+            <Image source={{ uri: imagen }} style={styles.imagePreview} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <MaterialCommunityIcons name="image" size={40} color="#ccc" />
+            </View>
+          )}
+          <TouchableOpacity style={styles.cameraBtn} onPress={() => setIsCameraVisible(true)}>
+            <MaterialCommunityIcons name="camera" size={24} color="#fff" />
+            <Text style={styles.cameraBtnText}>Tomar Foto</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Aplica Impuesto</Text>
@@ -145,6 +154,15 @@ export default function CrearProducto() {
           setIsScannerVisible(false);
         }}
       />
+
+      <ImageCapture
+        visible={isCameraVisible}
+        onClose={() => setIsCameraVisible(false)}
+        onCapture={(uri) => {
+          setImagen(uri);
+          setIsCameraVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -179,6 +197,37 @@ const styles = StyleSheet.create({
   catContainer: {
     flexDirection: 'row',
     marginBottom: 20,
+  },
+  imageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 15,
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+  },
+  imagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#007bff',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    gap: 8,
+  },
+  cameraBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   catPill: {
     paddingHorizontal: 15,

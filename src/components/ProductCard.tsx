@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { Text, View, StyleSheet, TouchableOpacity, Image } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 interface Product {
@@ -7,6 +7,7 @@ interface Product {
   precio: number;
   stock: number;
   codigo: string;
+  imagen?: string;
   aplica_impuesto?: number | boolean;
 }
 
@@ -23,7 +24,14 @@ export const ProductCard = ({
 }: ProductCardProps) => {
   return (
     <View style={styles.card}>
-      <View style={{ marginLeft: 10 }}>
+      {product.imagen ? (
+        <Image source={{ uri: product.imagen }} style={styles.image} />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <MaterialIcons name="image" size={24} color="#ccc" />
+        </View>
+      )}
+      <View style={styles.info}>
         <Text style={styles.name}>{product.nombre}</Text>
         <Text> codigo: {product.codigo}</Text>
         <Text> precio: C${product.precio}</Text>
@@ -62,8 +70,26 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 8,
   },
+  info: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  image: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  imagePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   actions: {
     flexDirection: "row",
     gap: 20,
+    alignItems: 'center',
   },
 });

@@ -38,8 +38,6 @@ export const useCartStore = create<CartState>((set, get) => ({
     const { items, calcularTotal } = get();
 
     const existingItem = items.find((item) => item.product.id === product.id);
-    // Generic products might have negative IDs, so we can treat them uniquely or just add them.
-    // We'll give generic products unique negative IDs so they don't stack unless explicitly matched.
     if (existingItem && product.id >= 0) {
       existingItem.quantity += quantity;
     } else {
@@ -58,7 +56,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       precio,
       stock: 9999, // infinite
       codigo: "GENERIC",
-      aplica_impuesto: true
+      aplica_impuesto: true,
     };
     addItem(genericProduct, 1);
   },
@@ -96,4 +94,3 @@ export const useCartStore = create<CartState>((set, get) => ({
     set({ total });
   },
 }));
-
